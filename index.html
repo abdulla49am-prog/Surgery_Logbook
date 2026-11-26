@@ -1,0 +1,2236 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Surgical Logbook</title>
+<meta name="description" content="A private, offline surgical logbook aligned with the RACS MALT case-entry workflow. All data stays on your device.">
+<meta name="theme-color" content="#0b6e74">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logbook">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Surgical Logbook">
+<meta property="og:description" content="A private, offline surgical logbook aligned with the RACS MALT workflow. Install it on your phone — your logbook stays on your device.">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<script>
+  // Apply the theme before first paint to avoid a flash of the wrong colours.
+  (function () {
+    var theme = null;
+    try { theme = localStorage.getItem('sl-theme'); } catch (e) { theme = null; }
+    if (theme !== 'dark' && theme !== 'light') {
+      theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --surface-2: #eef2f5;
+    --text: #14202b;
+    --muted: #4f6070;
+    --border: #d3dbe3;
+    --accent: #0b6e74;
+    --accent-strong: #08585d;
+    --on-accent: #ffffff;
+    --danger: #b42318;
+    --on-danger: #ffffff;
+    --banner-bg: #fff3cd;
+    --banner-text: #4d3a02;
+    --warn-bg: #fdecea;
+    --focus: #1a5fd0;
+    --chip: #dceeef;
+    --track: #e3e9ee;
+    --shadow: 0 1px 3px rgba(16, 24, 40, .08), 0 1px 2px rgba(16, 24, 40, .05);
+    --tab-h: 60px;
+    --sidebar-w: 0px;
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --bg: #0d1318;
+    --surface: #161f27;
+    --surface-2: #1d2832;
+    --text: #e6edf3;
+    --muted: #a6b5c3;
+    --border: #2d3b48;
+    --accent: #4cc2c8;
+    --accent-strong: #79d6da;
+    --on-accent: #032527;
+    --danger: #ff8f85;
+    --on-danger: #2b0602;
+    --banner-bg: #3b2e07;
+    --banner-text: #ffe39a;
+    --warn-bg: #3a1714;
+    --focus: #8ab4f8;
+    --chip: #1d3b3e;
+    --track: #24313c;
+    --shadow: none;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.modal-open { overflow: hidden; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.1rem; }
+  h3 { font-size: 1rem; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .visually-hidden {
+    position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* Privacy banner — visible on every screen */
+  .privacy-banner {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--banner-bg); color: var(--banner-text);
+    border-bottom: 1px solid var(--border);
+    font-size: .82rem; font-weight: 600; text-align: center;
+    padding: calc(8px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left));
+  }
+  .privacy-banner.in-modal { position: static; padding: 8px 16px; border-bottom: 0; border-top: 1px solid var(--border); }
+
+  /* Layout */
+  main {
+    max-width: 960px; margin: 0 auto;
+    padding: 16px calc(16px + env(safe-area-inset-right)) calc(var(--tab-h) + env(safe-area-inset-bottom) + 100px) calc(16px + env(safe-area-inset-left));
+  }
+  .view-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+  .view-header .sub { color: var(--muted); font-size: .9rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px;
+  }
+  .card > h2 { margin-bottom: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: .88rem; }
+  .stack > * + * { margin-top: 10px; }
+
+  /* Bottom tabs */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; background: var(--surface); border-top: 1px solid var(--border);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .tab {
+    flex: 1; min-height: var(--tab-h); min-width: 44px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: none; border: 0; color: var(--muted); font: inherit; font-size: .78rem; font-weight: 600;
+    cursor: pointer;
+  }
+  .tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .tab[aria-current="page"] { color: var(--accent); }
+
+  @media (min-width: 900px) and (orientation: landscape) {
+    :root { --sidebar-w: 200px; }
+    .tabbar {
+      top: 0; right: auto; width: var(--sidebar-w); flex-direction: column; justify-content: flex-start;
+      border-top: 0; border-right: 1px solid var(--border);
+      padding: calc(env(safe-area-inset-top) + 64px) 10px env(safe-area-inset-bottom) calc(10px + env(safe-area-inset-left));
+    }
+    .tab { flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 0 14px; border-radius: 10px; font-size: .95rem; min-height: 52px; }
+    .tab[aria-current="page"] { background: var(--surface-2); }
+    main { margin-left: var(--sidebar-w); padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
+    .fab { bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+    .toast { bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+  }
+
+  /* Buttons and fields */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; min-width: 44px; padding: 0 16px;
+    border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); }
+  .btn-block { width: 100%; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn-row > .btn { flex: 1 1 200px; }
+  .link-btn {
+    background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600;
+    min-height: 44px; min-width: 44px; padding: 0 8px; cursor: pointer;
+  }
+  .link-btn.danger { color: var(--danger); }
+  .field { margin-bottom: 14px; }
+  .field > label, .label { display: block; font-weight: 600; font-size: .92rem; margin-bottom: 6px; }
+  .req { color: var(--danger); }
+  input[type="text"], input[type="date"], input[type="url"], select, textarea {
+    width: 100%; min-height: 44px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text);
+    font: inherit; font-size: 16px; /* 16px prevents iOS zoom on focus */
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type="date"] { display: block; }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+    background-size: 6px 6px; background-repeat: no-repeat; padding-right: 34px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  [aria-invalid="true"] { border-color: var(--danger) !important; box-shadow: 0 0 0 1px var(--danger); }
+  .err { color: var(--danger); font-size: .86rem; font-weight: 600; margin-top: 4px; }
+  .err:empty { display: none; }
+  .hint { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  @media (max-width: 420px) { .grid2.collapse { grid-template-columns: 1fr; } }
+
+  /* Combobox */
+  .combo { position: relative; }
+  .combo-list {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10;
+    max-height: 40vh; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  }
+  .combo-list li { padding: 11px 14px; min-height: 44px; cursor: pointer; }
+  .combo-list li[aria-selected="true"], .combo-list li:hover { background: var(--surface-2); }
+  .combo-list li.free { color: var(--accent); font-weight: 600; border-top: 1px solid var(--border); }
+  .combo-list li.note { color: var(--muted); font-size: .88rem; cursor: default; border-top: 1px solid var(--border); }
+  .combo-list li.note:hover { background: none; }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 2px; padding-left: 12px;
+    background: var(--chip); color: var(--text); border-radius: 999px; font-size: .92rem;
+  }
+  .chip button { min-width: 44px; min-height: 40px; background: none; border: 0; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
+  .chip-entry { display: flex; gap: 8px; }
+  .chip-entry .combo { flex: 1; }
+
+  /* Install card */
+  .install-card { border-left: 5px solid var(--accent); }
+  .install-card h2 { margin-bottom: 6px; }
+  .install-card .btn-row { margin-top: 12px; }
+
+  /* Journal */
+  .filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  @media (max-width: 560px) { .filters { grid-template-columns: 1fr 1fr; } .filters .f-proc-wrap { grid-column: 1 / -1; } }
+  .filters label { font-size: .8rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+  .case-list { list-style: none; margin: 0; padding: 0; }
+  .case-item { position: relative; margin-bottom: 12px; border-radius: 14px; overflow: hidden; }
+  .swipe-delete {
+    position: absolute; top: 1px; right: 1px; bottom: 1px; width: 120px; border-radius: 0 13px 13px 0; padding-left: 24px;
+    background: var(--danger); color: var(--on-danger); border: 0; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .case-body {
+    position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px; cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+    transition: transform .2s ease;
+  }
+  .case-item.open .case-body { transform: translateX(-96px); }
+  .case-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .case-date { font-weight: 700; }
+  .case-where { color: var(--muted); font-size: .92rem; margin-bottom: 8px; }
+  .case-procs { list-style: none; margin: 0 0 8px; padding: 0; }
+  .case-procs li { padding: 3px 0; }
+  .case-procs .pname { font-weight: 600; }
+  .case-procs .prole { display: block; color: var(--muted); font-size: .88rem; }
+  .case-sup { font-size: .88rem; color: var(--muted); }
+  .badge { display: inline-block; font-size: .76rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .badge-comp { background: var(--warn-bg); color: var(--danger); }
+  .badge-ok { background: var(--surface-2); color: var(--muted); }
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  .empty strong { display: block; color: var(--text); font-size: 1.05rem; margin-bottom: 4px; }
+
+  .fab {
+    position: fixed; z-index: 25;
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 16px);
+    min-height: 56px; padding: 0 22px; border-radius: 999px; border: 0;
+    background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 700; font-size: 1rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .25); cursor: pointer;
+  }
+
+  /* Dashboard */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: 1fr 1fr; } .stats .stat-wide { grid-column: 1 / -1; } }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+  .stat .k { font-size: .82rem; color: var(--muted); font-weight: 600; }
+  .stat .v { font-size: 1.7rem; font-weight: 800; margin-top: 2px; overflow-wrap: anywhere; }
+  .stat .v.text { font-size: 1.05rem; line-height: 1.3; margin-top: 6px; }
+  .dash-filter { max-width: 280px; margin-bottom: 14px; }
+  .table-scroll { max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table.counts { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  table.counts th, table.counts td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  table.counts td.num, table.counts th.num { text-align: right; width: 90px; }
+  table.counts thead th { position: sticky; top: 0; background: var(--surface-2); padding: 0; }
+  table.counts thead button {
+    width: 100%; min-height: 44px; padding: 0 12px; background: none; border: 0; color: var(--text);
+    font: inherit; font-weight: 700; text-align: inherit; cursor: pointer;
+  }
+  table.counts tbody tr:last-child td { border-bottom: 0; }
+  .chart { display: block; width: 100%; height: auto; }
+  .chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-scroll .chart { width: auto; }
+  .c-label { fill: var(--text); font-size: 14px; font-weight: 600; }
+  .c-value { fill: var(--text); font-size: 14px; font-weight: 700; }
+  #roleChart .chart { width: auto; }
+  .c-value-sm { fill: var(--text); font-size: 12px; font-weight: 700; }
+  .c-tick { fill: var(--muted); font-size: 12px; }
+  .c-tick-year { fill: var(--muted); font-size: 11px; font-weight: 700; }
+  .c-bar { fill: var(--accent); }
+  .c-track { fill: var(--track); }
+  .c-axis { stroke: var(--border); stroke-width: 1; }
+
+  /* Settings */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+  .switch { position: relative; width: 56px; height: 32px; flex: 0 0 auto; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+  .switch .track { position: absolute; inset: 0; border-radius: 999px; background: var(--track); border: 1px solid var(--border); transition: background .2s; }
+  .switch .knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+  .switch input:checked ~ .track { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked ~ .knob { transform: translateX(24px); }
+  .switch input:focus-visible ~ .track { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .file-btn { position: relative; overflow: hidden; }
+  .file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+  .file-btn:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .status-line { font-size: .92rem; }
+  .status-line strong { font-weight: 700; }
+  .share-row { display: flex; gap: 8px; }
+  .share-row input { flex: 1; min-width: 0; }
+  ol.steps { margin: 6px 0 0; padding-left: 1.3em; }
+  ol.steps li { margin: 3px 0; }
+  .team { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  @media (max-width: 480px) { .team { grid-template-columns: 1fr; } }
+  .member { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 14px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+  .member img { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); margin-bottom: 10px; background: var(--surface-2); }
+  .member .name { font-weight: 800; font-size: 1.02rem; }
+  .member .qual { color: var(--muted); font-size: .88rem; font-weight: 600; }
+  .about-meta { text-align: center; }
+  .about-meta p + p { margin-top: 4px; }
+  .about-meta .role { font-weight: 700; }
+  .about-email { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; word-break: break-all; }
+  .alert { padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); color: var(--danger); font-weight: 600; font-size: .92rem; }
+
+  /* Case editor modal */
+  .modal {
+    position: fixed; inset: 0; z-index: 50; background: var(--bg);
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  .modal-header { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .modal-bar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+    padding: calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));
+  }
+  .modal-bar h1 { font-size: 1.1rem; text-align: center; }
+  .modal-bar h1:focus { outline: none; }
+  .modal-bar .left { justify-self: start; }
+  .modal-bar .right { justify-self: end; }
+  .modal form {
+    max-width: 760px; margin: 0 auto;
+    padding: 16px calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  fieldset.section { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 6px 16px 4px; margin: 0 0 16px; min-width: 0; }
+  fieldset.section > legend { font-weight: 800; font-size: 1.02rem; padding: 0 6px; margin-left: -6px; }
+  .proc-block { border: 1px dashed var(--border); border-radius: 12px; padding: 12px 12px 2px; margin: 10px 0 14px; background: var(--bg); }
+  .proc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .form-alert { margin-bottom: 14px; }
+
+  /* Confirm dialog */
+  dialog.confirm {
+    border: 1px solid var(--border); border-radius: 16px; padding: 20px; width: min(420px, calc(100vw - 32px));
+    background: var(--surface); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.35);
+  }
+  dialog.confirm::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog.confirm h2 { margin-bottom: 8px; }
+  dialog.confirm p { color: var(--muted); margin-bottom: 18px; white-space: pre-line; }
+  dialog.confirm .btn-row > .btn { flex: 1 1 120px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 60;
+    bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 84px);
+    max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 12px;
+    background: #1f2a33; color: #fff; font-weight: 600; font-size: .92rem; text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,.3); opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  .modal-open .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+<div class="privacy-banner" role="note">Log procedures only. Never enter patient names, hospital numbers, dates of birth, or any identifiers.</div>
+
+<nav class="tabbar" aria-label="Main">
+  <button type="button" class="tab" data-tab="journal" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg>
+    <span>Journal</span>
+  </button>
+  <button type="button" class="tab" data-tab="dashboard">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+    <span>Dashboard</span>
+  </button>
+  <button type="button" class="tab" data-tab="settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<main id="main">
+  <section id="installCard" class="card install-card" aria-live="polite" hidden></section>
+
+  <!-- Journal -->
+  <section id="view-journal" class="view" aria-labelledby="journalTitle">
+    <div class="view-header">
+      <h1 id="journalTitle">Journal</h1>
+      <span id="journalCount" class="sub"></span>
+    </div>
+    <div id="filterBar" class="filters" hidden>
+      <div>
+        <label for="fMonth">Month</label>
+        <select id="fMonth"></select>
+      </div>
+      <div>
+        <label for="fRole">Role</label>
+        <select id="fRole"></select>
+      </div>
+      <div class="f-proc-wrap">
+        <label for="fProc">Procedure</label>
+        <select id="fProc"></select>
+      </div>
+    </div>
+    <p id="journalLoading" class="empty">Loading your logbook…</p>
+    <div id="journalEmpty" class="empty" hidden>
+      <strong>No cases logged yet.</strong>
+      Tap + New Case to begin.
+    </div>
+    <div id="filterEmpty" class="empty" hidden>
+      <strong>No cases match these filters.</strong>
+      <button type="button" class="link-btn" id="clearFilters">Clear filters</button>
+    </div>
+    <ul id="caseList" class="case-list" aria-label="Logged cases"></ul>
+    <p id="swipeHint" class="hint" hidden>Tip: swipe a case left to delete it, or tap it to edit.</p>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="view-dashboard" class="view" aria-labelledby="dashTitle" hidden>
+    <div class="view-header"><h1 id="dashTitle">Dashboard</h1></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Total cases</div><div class="v" id="statTotal">0</div></div>
+      <div class="stat"><div class="k">Cases this month</div><div class="v" id="statMonth">0</div></div>
+      <div class="stat stat-wide"><div class="k">Top procedure</div><div class="v text" id="statTop">—</div></div>
+    </div>
+
+    <div class="field dash-filter">
+      <label for="dashMonth">Show counts for</label>
+      <select id="dashMonth"></select>
+    </div>
+
+    <div class="card">
+      <h2 id="procCountsTitle">Counts by procedure</h2>
+      <p id="dashNoMonth" class="empty" hidden>No cases for this month.</p>
+      <div id="procCountsWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="roleChartTitle">Counts by role</h2>
+      <div id="roleChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cases per month</h2>
+      <p class="hint" style="margin:-6px 0 10px">Full history — not affected by the filter above.</p>
+      <div id="monthChart" class="chart-scroll"></div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="view-settings" class="view" aria-labelledby="settingsTitle" hidden>
+    <div class="view-header"><h1 id="settingsTitle">Settings</h1></div>
+
+    <div class="card">
+      <h2>Appearance</h2>
+      <div class="switch-row">
+        <label for="darkToggle" class="label" style="margin:0">Dark mode</label>
+        <span class="switch">
+          <input type="checkbox" id="darkToggle" role="switch">
+          <span class="track" aria-hidden="true"></span>
+          <span class="knob" aria-hidden="true"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Your data</h2>
+      <div class="stack">
+        <p class="status-line" id="storageStatus">Storage: checking…</p>
+        <p class="small muted" id="storageDetail"></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="exportCsv">Export CSV</button>
+          <button type="button" class="btn" id="exportJson">Export JSON backup</button>
+          <label class="btn file-btn" for="importJson">Import JSON backup
+            <input type="file" id="importJson" accept=".json,application/json">
+          </label>
+        </div>
+        <p class="small muted">CSV opens in Numbers, Excel or Google Sheets (one row per procedure). The JSON backup restores your logbook exactly. Importing a backup <strong>replaces</strong> everything currently on this device.</p>
+        <div id="importError" class="alert" role="alert" hidden></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Share this app</h2>
+      <div class="stack">
+        <p>Send this link to a colleague. Everyone who installs it gets their own private, empty logbook — nothing is shared or synced between devices.</p>
+        <div class="share-row">
+          <label for="shareUrl" class="visually-hidden">App link</label>
+          <input type="url" id="shareUrl" readonly>
+          <button type="button" class="btn btn-primary" id="copyLink">Copy link</button>
+        </div>
+        <div>
+          <h3>Install on iPhone or iPad</h3>
+          <ol class="steps">
+            <li>Open the link in <strong>Safari</strong>.</li>
+            <li>Tap the <strong>Share</strong> button (square with an arrow).</li>
+            <li>Tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+            <li>Always open the logbook from the Home Screen icon.</li>
+          </ol>
+        </div>
+        <div>
+          <h3>Install on Android</h3>
+          <ol class="steps">
+            <li>Open the link in <strong>Chrome</strong>.</li>
+            <li>Tap <strong>Install</strong> on the banner, or tap the <strong>⋮</strong> menu → <strong>Add to Home screen</strong> (or <strong>Install app</strong>).</li>
+            <li>Open the logbook from its Home Screen icon.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" aria-labelledby="aboutUsTitle">
+      <h2 id="aboutUsTitle">About us</h2>
+      <div class="team">
+        <div class="member">
+          <img src="about-abdullah.jpg" alt="Photo of Dr Abdullah S Mansuri" width="112" height="112" loading="lazy">
+          <p class="name">Dr Abdullah S Mansuri</p>
+          <p class="qual">M.S</p>
+        </div>
+        <div class="member">
+          <img src="about-mohammedanis.jpg" alt="Photo of Dr MohammedAnis S Mansuri" width="112" height="112" loading="lazy">
+          <p class="name">Dr MohammedAnis S Mansuri</p>
+          <p class="qual">M.S</p>
+        </div>
+      </div>
+      <div class="about-meta">
+        <p class="role">General and Laparoscopic Surgeons</p>
+        <p class="muted">Ahmedabad, Gujarat, India</p>
+        <p><a class="about-email" href="mailto:abu_55@rocketmail.com">abu_55@rocketmail.com</a></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>About and privacy</h2>
+      <div class="stack small">
+        <p><strong>Surgical Logbook</strong> <span id="appVersion"></span></p>
+        <p>Your logbook is stored only on this device, in this browser. There are no accounts, no analytics, no cloud sync and no tracking. After the first visit the app works fully offline and makes no network requests with your data.</p>
+        <p>Log procedures only. Never enter patient names, hospital numbers, dates of birth or any other identifiers.</p>
+        <p>Because data never leaves your device, export a JSON backup regularly — if you lose or reset the device, the backup is the only copy.</p>
+        <p id="installState" class="muted"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<button type="button" class="fab" id="fab">+ New Case</button>
+
+<!-- New / edit case -->
+<div id="caseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+  <div class="modal-header">
+    <div class="modal-bar">
+      <button type="button" class="link-btn left" id="cancelCase">Cancel</button>
+      <h1 id="modalTitle" tabindex="-1">New case</h1>
+      <button type="submit" form="caseForm" class="btn btn-primary right" id="saveCase">Save</button>
+    </div>
+    <div class="privacy-banner in-modal" role="note">Log procedures only. Never enter patient names, hospital numbers, dates of birth, or any identifiers.</div>
+  </div>
+
+  <form id="caseForm" novalidate autocomplete="off">
+    <div id="formAlert" class="alert form-alert" role="alert" hidden></div>
+
+    <fieldset class="section">
+      <legend>Case details</legend>
+      <div class="grid2 collapse">
+        <div class="field">
+          <label for="fDate">Procedure date <span class="req" aria-hidden="true">*</span></label>
+          <input type="date" id="fDate" required aria-required="true" aria-describedby="fDate-err">
+          <p class="err" id="fDate-err"></p>
+        </div>
+        <div class="field">
+          <label for="fLevel">SET / PGY level</label>
+          <select id="fLevel"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fHospital">Hospital <span class="req" aria-hidden="true">*</span></label>
+        <div class="combo"><input type="text" id="fHospital" required aria-required="true" aria-describedby="fHospital-err" placeholder="e.g. Royal Melbourne Hospital" autocapitalize="words" spellcheck="false"></div>
+        <p class="err" id="fHospital-err"></p>
+      </div>
+      <div class="field">
+        <label for="fDept">Department / unit / clinic</label>
+        <div class="combo"><input type="text" id="fDept" placeholder="e.g. General Surgery Unit B" autocapitalize="words" spellcheck="false"></div>
+      </div>
+      <div class="field">
+        <label for="fRotation">Rotation period</label>
+        <div class="combo"><input type="text" id="fRotation" placeholder="e.g. T1 2026" spellcheck="false"></div>
+      </div>
+    </fieldset>
+
+    <fieldset class="section">
+      <legend>Procedure details</legend>
+      <div id="procList"></div>
+      <button type="button" class="btn btn-block" id="addProc">+ Add another procedure</button>
+      <div class="field" style="margin-top:16px">
+        <label for="fLearning">Learning points</label>
+        <textarea id="fLearning" placeholder="What went well, what you would do differently, technical pearls…"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset class="section">
+      <legend>Supervision</legend>
+      <div class="field">
+        <label for="fSupervisor">Nominated supervisor</label>
+        <div class="combo"><input type="text" id="fSupervisor" placeholder="Consultant responsible for approving this case" autocapitalize="words" spellcheck="false"></div>
+      </div>
+      <div class="field">
+        <label for="fAltSup">Alternate supervisor(s)</label>
+        <div id="altChips" class="chips" aria-label="Alternate supervisors added"></div>
+        <div class="chip-entry">
+          <div class="combo"><input type="text" id="fAltSup" placeholder="Surgeon present in theatre" autocapitalize="words" spellcheck="false" aria-describedby="fAltSup-hint"></div>
+          <button type="button" class="btn" id="addAltSup">Add</button>
+        </div>
+        <p class="hint" id="fAltSup-hint">Add each surgeon separately.</p>
+      </div>
+    </fieldset>
+
+    <button type="button" class="btn btn-danger btn-block" id="deleteCase" hidden>Delete this case</button>
+  </form>
+</div>
+
+<dialog id="confirmDialog" class="confirm" aria-labelledby="cdTitle" aria-describedby="cdMsg">
+  <form method="dialog">
+    <h2 id="cdTitle">Are you sure?</h2>
+    <p id="cdMsg"></p>
+    <div class="btn-row">
+      <button type="submit" value="cancel" class="btn" id="cdCancel" autofocus>Cancel</button>
+      <button type="submit" value="ok" class="btn btn-danger" id="cdOk">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Constants
+  // ---------------------------------------------------------------------------
+  const APP_VERSION = '1.1.0';
+  const DB_NAME = 'surgical_logbook';
+  const DB_VERSION = 1;
+  const LS_THEME = 'sl-theme';
+  const LS_INSTALL_DISMISSED = 'sl-install-dismissed';
+
+  const ROLES = [
+    'Observer',
+    'Assistant',
+    'Surgeon – Mentor scrubbed',
+    'Surgeon – Mentor in theatre',
+    'Surgeon – Mentor available',
+    'Surgeon alone (unsupervised)'
+  ];
+  const TIMINGS = ['Elective', 'Emergency'];
+  const APPROACHES = ['Open', 'Laparoscopic', 'Robotic', 'Endoscopic', 'Percutaneous', 'Other'];
+  const GRADES = ['None', 'Clavien-Dindo I', 'Clavien-Dindo II', 'Clavien-Dindo IIIa', 'Clavien-Dindo IIIb',
+    'Clavien-Dindo IVa', 'Clavien-Dindo IVb', 'Clavien-Dindo V'];
+  const LEVELS = ['SET 1', 'SET 2', 'SET 3', 'SET 4', 'SET 5', 'PGY 1', 'PGY 2', 'PGY 3+'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const PROCEDURES = [
+    // General, upper GI and HPB
+    'Appendicectomy – laparoscopic', 'Appendicectomy – open',
+    'Cholecystectomy – laparoscopic', 'Cholecystectomy – open', 'Intraoperative cholangiogram',
+    'Common bile duct exploration', 'Diagnostic laparoscopy', 'Laparotomy – exploratory', 'Adhesiolysis',
+    'Small bowel resection', 'Repair of perforated peptic ulcer', 'Gastrectomy – partial', 'Gastrectomy – total',
+    'Oesophagectomy', 'Hiatus hernia repair / fundoplication', 'Sleeve gastrectomy', 'Roux-en-Y gastric bypass',
+    'Gastrojejunostomy', 'Feeding gastrostomy / jejunostomy', 'Splenectomy', 'Liver resection',
+    'Pancreaticoduodenectomy (Whipple)', 'Distal pancreatectomy',
+    // Hernia
+    'Inguinal hernia repair – open', 'Inguinal hernia repair – laparoscopic (TEP/TAPP)', 'Femoral hernia repair',
+    'Umbilical / paraumbilical hernia repair', 'Incisional / ventral hernia repair – open',
+    'Incisional / ventral hernia repair – laparoscopic',
+    // Endoscopy
+    'Gastroscopy (OGD)', 'Colonoscopy', 'Flexible sigmoidoscopy', 'ERCP',
+    // Colorectal and anorectal
+    'Right hemicolectomy', 'Extended right hemicolectomy', 'Left hemicolectomy', 'Sigmoid colectomy',
+    'Anterior resection', 'Low anterior resection', 'Abdominoperineal resection', "Hartmann's procedure",
+    "Reversal of Hartmann's", 'Subtotal / total colectomy', 'Formation of ileostomy / colostomy', 'Closure of stoma',
+    'Haemorrhoidectomy', 'Haemorrhoid banding', 'Lateral internal sphincterotomy',
+    'Fistula-in-ano surgery (fistulotomy / seton)', 'Incision and drainage of perianal abscess',
+    'Excision of pilonidal sinus', 'Examination under anaesthesia (EUA) – anorectal',
+    // Breast and endocrine
+    'Wide local excision – breast', 'Mastectomy', 'Sentinel lymph node biopsy', 'Axillary lymph node dissection',
+    'Excision of breast lump', 'Total thyroidectomy', 'Hemithyroidectomy', 'Parathyroidectomy', 'Adrenalectomy',
+    // Skin and soft tissue
+    'Excision of skin lesion', 'Excision of lipoma', 'Incision and drainage of abscess', 'Wound debridement',
+    'Split-skin graft', 'Local flap reconstruction', 'Excisional lymph node biopsy',
+    // Vascular
+    'Varicose vein surgery / endovenous ablation', 'Arteriovenous fistula creation', 'Embolectomy',
+    'Fasciotomy', 'Carotid endarterectomy', 'Femoral endarterectomy', 'Femoral–popliteal bypass',
+    'Endovascular aneurysm repair (EVAR)', 'Open abdominal aortic aneurysm repair',
+    'Below-knee amputation', 'Above-knee amputation', 'Toe / ray amputation',
+    // Urology
+    'Cystoscopy', 'Transurethral resection of prostate (TURP)', 'Transurethral resection of bladder tumour (TURBT)',
+    'Ureteroscopy', 'Ureteric stent insertion', 'Circumcision', 'Orchidopexy', 'Scrotal exploration',
+    'Hydrocele repair', 'Vasectomy', 'Nephrectomy',
+    // Orthopaedics
+    'ORIF – ankle', 'ORIF – distal radius', 'Hemiarthroplasty – hip', 'Total hip replacement',
+    'Total knee replacement', 'Dynamic hip screw', 'Intramedullary nail – femur', 'Knee arthroscopy',
+    'Carpal tunnel release', 'Closed reduction of fracture',
+    // Paediatrics, ENT, neurosurgery, thoracic and access
+    'Pyloromyotomy', 'Paediatric inguinal herniotomy', 'Tonsillectomy', 'Tracheostomy',
+    'Burr hole', 'Craniotomy', 'Chest drain insertion', 'Video-assisted thoracoscopic surgery (VATS)',
+    'Central venous catheter insertion', 'Port-a-cath insertion'
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Small helpers
+  // ---------------------------------------------------------------------------
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ESC_MAP[ch]);
+  const pad = (n) => String(n).padStart(2, '0');
+  const isISODate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
+
+  function localISODate(date) {
+    const d = date || new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  const todayISO = () => localISODate(new Date());
+  const currentMonthKey = () => todayISO().slice(0, 7);
+
+  function fmtDate(iso) {
+    if (!isISODate(iso)) return iso || '';
+    const parts = iso.split('-');
+    return Number(parts[2]) + ' ' + MONTHS[Number(parts[1]) - 1] + ' ' + parts[0];
+  }
+  function fmtMonth(key) {
+    const parts = key.split('-');
+    return MONTHS[Number(parts[1]) - 1] + ' ' + parts[0];
+  }
+  function fmtTimestamp(iso) {
+    if (!iso) return 'Never';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Never';
+    return fmtDate(localISODate(d)) + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function monthRange(fromKey, toKey) {
+    const out = [];
+    let y = Number(fromKey.slice(0, 4));
+    let m = Number(fromKey.slice(5, 7));
+    const ty = Number(toKey.slice(0, 4));
+    const tm = Number(toKey.slice(5, 7));
+    let guard = 0;
+    while ((y < ty || (y === ty && m <= tm)) && guard < 1200) {
+      out.push(y + '-' + pad(m));
+      m += 1;
+      if (m > 12) { m = 1; y += 1; }
+      guard += 1;
+    }
+    return out;
+  }
+  function uuid() {
+    if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  function uniqueSorted(values) {
+    const seen = new Map();
+    values.forEach((v) => {
+      const t = (v || '').trim();
+      if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+    });
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  }
+  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function lsSet(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage unavailable */ } }
+
+  let toastTimer = null;
+  function toast(message) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data validation (used for loading, importing and saving)
+  // ---------------------------------------------------------------------------
+  function cleanString(v) {
+    if (typeof v === 'string') return v.trim();
+    if (v == null) return '';
+    return String(v).trim();
+  }
+  function normaliseCase(raw, index) {
+    const n = index + 1;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Case ' + n + ' is not a valid case record.');
+    const date = cleanString(raw.date);
+    if (!isISODate(date)) throw new Error('Case ' + n + ' has a missing or invalid procedure date.');
+    const hospital = cleanString(raw.hospital);
+    if (!hospital) throw new Error('Case ' + n + ' is missing a hospital.');
+    if (!Array.isArray(raw.procedures) || raw.procedures.length === 0) throw new Error('Case ' + n + ' has no procedures.');
+    const procedures = raw.procedures.map((p, j) => {
+      const src = p && typeof p === 'object' ? p : {};
+      const procedure = cleanString(src.procedure);
+      const role = cleanString(src.role);
+      if (!procedure) throw new Error('Case ' + n + ', procedure ' + (j + 1) + ' has no procedure name.');
+      if (ROLES.indexOf(role) === -1) throw new Error('Case ' + n + ', procedure ' + (j + 1) + ' has an unrecognised supervision level.');
+      const timing = cleanString(src.timing);
+      const approach = cleanString(src.approach);
+      const grade = cleanString(src.grade);
+      return {
+        procedure: procedure,
+        role: role,
+        timing: TIMINGS.indexOf(timing) > -1 ? timing : '',
+        approach: APPROACHES.indexOf(approach) > -1 ? approach : '',
+        grade: GRADES.indexOf(grade) > -1 ? grade : '',
+        complications: cleanString(src.complications)
+      };
+    });
+    const now = new Date().toISOString();
+    const level = cleanString(raw.level);
+    return {
+      id: cleanString(raw.id) || uuid(),
+      createdAt: cleanString(raw.createdAt) || now,
+      updatedAt: cleanString(raw.updatedAt) || now,
+      date: date,
+      hospital: hospital,
+      department: cleanString(raw.department),
+      rotation: cleanString(raw.rotation),
+      level: LEVELS.indexOf(level) > -1 ? level : '',
+      procedures: procedures,
+      learningPoints: cleanString(raw.learningPoints),
+      supervisor: cleanString(raw.supervisor),
+      altSupervisors: Array.isArray(raw.altSupervisors) ? raw.altSupervisors.map(cleanString).filter(Boolean) : []
+    };
+  }
+  // Returns { cases, lastExport, savedAt } or throws with a readable message.
+  function parseLogbook(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { throw new Error('This file is not valid JSON.'); }
+    const list = Array.isArray(data) ? data : (data && Array.isArray(data.cases) ? data.cases : null);
+    if (!list) throw new Error('This file is not a Surgical Logbook backup (no "cases" list found).');
+    const seen = new Set();
+    const cases = list.map((c, i) => {
+      const clean = normaliseCase(c, i);
+      if (seen.has(clean.id)) clean.id = uuid();
+      seen.add(clean.id);
+      return clean;
+    });
+    return {
+      cases: cases,
+      lastExport: data && typeof data.lastExport === 'string' ? data.lastExport : null,
+      savedAt: data && typeof data.savedAt === 'string' ? data.savedAt : null
+    };
+  }
+  function serialiseLogbook(cases, lastExport, savedAt) {
+    return JSON.stringify({
+      app: 'surgical-logbook',
+      schema: 1,
+      appVersion: APP_VERSION,
+      savedAt: savedAt || new Date().toISOString(),
+      lastExport: lastExport || null,
+      cases: cases
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Storage: OPFS via Web Worker (tier 1) + IndexedDB mirror/fallback (tier 2)
+  // ---------------------------------------------------------------------------
+  const Store = (function () {
+    let mode = 'memory';
+    let worker = null;
+    let db = null;
+    let nextId = 0;
+    const pending = new Map();
+    let chain = Promise.resolve();
+
+    function rejectAllPending(message) {
+      pending.forEach((p) => { clearTimeout(p.timer); p.reject(new Error(message)); });
+      pending.clear();
+    }
+
+    function callWorker(type, payload, timeout) {
+      return new Promise((resolve, reject) => {
+        if (!worker) { reject(new Error('Storage worker unavailable.')); return; }
+        nextId += 1;
+        const id = nextId;
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error('Storage worker timed out.'));
+        }, timeout || 8000);
+        pending.set(id, { resolve: resolve, reject: reject, timer: timer });
+        worker.postMessage({ id: id, type: type, payload: payload });
+      });
+    }
+
+    async function startWorker() {
+      if (!('Worker' in window) || !navigator.storage || typeof navigator.storage.getDirectory !== 'function') return false;
+      try {
+        worker = new Worker('storage-worker.js');
+        worker.onmessage = (event) => {
+          const msg = event.data || {};
+          const p = pending.get(msg.id);
+          if (!p) return;
+          clearTimeout(p.timer);
+          pending.delete(msg.id);
+          if (msg.ok) p.resolve(msg.result);
+          else p.reject(new Error(msg.error || 'Storage error.'));
+        };
+        worker.onerror = (event) => {
+          if (event && typeof event.preventDefault === 'function') event.preventDefault();
+          rejectAllPending('Storage worker failed.');
+        };
+        const result = await callWorker('probe', null, 5000);
+        if (result && result.supported) return true;
+      } catch (e) {
+        /* fall through to IndexedDB */
+      }
+      if (worker) { worker.terminate(); worker = null; }
+      return false;
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('IndexedDB unavailable.')); return; }
+        let request;
+        try { request = indexedDB.open(DB_NAME, DB_VERSION); } catch (e) { reject(e); return; }
+        request.onupgradeneeded = () => {
+          const d = request.result;
+          if (!d.objectStoreNames.contains('cases')) d.createObjectStore('cases', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('IndexedDB could not be opened.'));
+        request.onblocked = () => reject(new Error('IndexedDB is blocked by another tab.'));
+      });
+    }
+
+    function idbReadAll() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(['cases', 'meta'], 'readonly');
+        const casesReq = tx.objectStore('cases').getAll();
+        const metaReq = tx.objectStore('meta').getAll();
+        tx.oncomplete = () => {
+          const meta = {};
+          (metaReq.result || []).forEach((row) => { meta[row.key] = row.value; });
+          resolve({ cases: casesReq.result || [], lastExport: meta.lastExport || null, savedAt: meta.savedAt || null });
+        };
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB read failed.'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB read aborted.'));
+      });
+    }
+
+    function idbWriteAll(cases, lastExport, savedAt) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(['cases', 'meta'], 'readwrite');
+        const store = tx.objectStore('cases');
+        store.clear();
+        cases.forEach((c) => store.put(c));
+        const meta = tx.objectStore('meta');
+        meta.put({ key: 'lastExport', value: lastExport || null });
+        meta.put({ key: 'savedAt', value: savedAt });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB write failed.'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB write aborted.'));
+      });
+    }
+
+    async function init() {
+      try { db = await openDB(); } catch (e) { db = null; }
+      const opfs = await startWorker();
+      mode = opfs ? 'opfs' : (db ? 'indexeddb' : 'memory');
+      return mode;
+    }
+
+    // Load: OPFS first → IndexedDB if OPFS is missing/corrupt → empty logbook.
+    async function load() {
+      let fromOpfs = null;
+      let fromIdb = null;
+      if (mode === 'opfs') {
+        try {
+          const text = await callWorker('read');
+          if (text) fromOpfs = parseLogbook(text);
+        } catch (e) {
+          fromOpfs = null;
+        }
+      }
+      if (db) {
+        try {
+          const raw = await idbReadAll();
+          if (raw.cases.length || raw.savedAt) {
+            fromIdb = parseLogbook(JSON.stringify(raw));
+          }
+        } catch (e) {
+          fromIdb = null;
+        }
+      }
+      let chosen = fromOpfs;
+      // If an earlier OPFS write failed but the IndexedDB mirror succeeded, the mirror is newer.
+      if (fromOpfs && fromIdb && fromIdb.savedAt && fromOpfs.savedAt && fromIdb.savedAt > fromOpfs.savedAt) chosen = fromIdb;
+      if (!chosen && fromIdb) {
+        chosen = fromIdb;
+        if (mode === 'opfs') {
+          try { await callWorker('write', serialiseLogbook(fromIdb.cases, fromIdb.lastExport, fromIdb.savedAt)); } catch (e) { /* mirror still holds the data */ }
+        }
+      }
+      return chosen || { cases: [], lastExport: null, savedAt: null };
+    }
+
+    async function doSave(cases, lastExport) {
+      const savedAt = new Date().toISOString();
+      let opfsOk = false;
+      let idbOk = false;
+      if (mode === 'opfs') {
+        try {
+          await callWorker('write', serialiseLogbook(cases, lastExport, savedAt));
+          opfsOk = true;
+        } catch (e) {
+          opfsOk = false;
+        }
+      }
+      if (db) {
+        try {
+          await idbWriteAll(cases, lastExport, savedAt);
+          idbOk = true;
+        } catch (e) {
+          idbOk = false;
+        }
+      }
+      if (mode === 'opfs' && !opfsOk && idbOk) mode = 'indexeddb';
+      if (mode === 'memory') return { opfsOk: false, idbOk: false };
+      if (!opfsOk && !idbOk) throw new Error('Your device storage refused the save.');
+      return { opfsOk: opfsOk, idbOk: idbOk };
+    }
+
+    // Saves are queued so writes never interleave.
+    function save(cases, lastExport) {
+      const snapshot = JSON.parse(JSON.stringify(cases));
+      const run = chain.then(() => doSave(snapshot, lastExport));
+      chain = run.catch(() => undefined);
+      return run;
+    }
+
+    async function requestPersistence() {
+      if (!navigator.storage || typeof navigator.storage.persist !== 'function') return null;
+      try {
+        const already = typeof navigator.storage.persisted === 'function' ? await navigator.storage.persisted() : false;
+        if (already) return true;
+        return await navigator.storage.persist();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    return {
+      init: init,
+      load: load,
+      save: save,
+      requestPersistence: requestPersistence,
+      mode: () => mode
+    };
+  })();
+
+  // ---------------------------------------------------------------------------
+  // App state
+  // ---------------------------------------------------------------------------
+  const state = {
+    cases: [],
+    lastExport: null,
+    loaded: false,
+    tab: 'journal',
+    editingId: null,
+    dirty: false,
+    saving: false,
+    altSupervisors: [],
+    filters: { month: '', role: '', procedure: '' },
+    dash: { month: '', sort: 'count', dir: 'desc' },
+    deferredPrompt: null,
+    installHintReady: false,
+    persisted: null
+  };
+
+  function persist() {
+    return Store.save(state.cases, state.lastExport).then((result) => {
+      renderStorageStatus();
+      return result;
+    });
+  }
+
+  function sortedCases() {
+    return state.cases.slice().sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return a.createdAt < b.createdAt ? 1 : -1;
+    });
+  }
+  function caseMonths() {
+    // Every month from the earliest case to the latest of (this month, latest case).
+    const now = currentMonthKey();
+    if (!state.cases.length) return [now];
+    let min = now;
+    let max = now;
+    state.cases.forEach((c) => {
+      const k = c.date.slice(0, 7);
+      if (k < min) min = k;
+      if (k > max) max = k;
+    });
+    return monthRange(min, max);
+  }
+  function usedProcedures() {
+    const all = [];
+    state.cases.forEach((c) => c.procedures.forEach((p) => all.push(p.procedure)));
+    return uniqueSorted(all);
+  }
+  function procedureOptions() {
+    // Frequently used procedures first, then the curated list.
+    const freq = new Map();
+    state.cases.forEach((c) => c.procedures.forEach((p) => freq.set(p.procedure, (freq.get(p.procedure) || 0) + 1)));
+    const used = Array.from(freq.keys()).sort((a, b) => freq.get(b) - freq.get(a) || a.localeCompare(b));
+    const out = [];
+    const seen = new Set();
+    used.concat(PROCEDURES).forEach((p) => {
+      const key = p.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); out.push(p); }
+    });
+    return out;
+  }
+  const hospitalOptions = () => uniqueSorted(state.cases.map((c) => c.hospital));
+  const departmentOptions = () => uniqueSorted(state.cases.map((c) => c.department));
+  const rotationOptions = () => uniqueSorted(state.cases.map((c) => c.rotation));
+  function supervisorOptions() {
+    const all = [];
+    state.cases.forEach((c) => { all.push(c.supervisor); c.altSupervisors.forEach((s) => all.push(s)); });
+    return uniqueSorted(all);
+  }
+
+  function fillSelect(select, options, current) {
+    select.innerHTML = options.map((o) => '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>').join('');
+    select.value = current;
+    if (select.value !== current) select.value = options.length ? options[0].value : '';
+    return select.value;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Theme
+  // ---------------------------------------------------------------------------
+  function currentTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+  function applyTheme(theme, save) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const meta = $('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#161f27' : '#0b6e74');
+    $('#darkToggle').checked = theme === 'dark';
+    if (save) lsSet(LS_THEME, theme);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+  function showTab(tab) {
+    state.tab = tab;
+    $$('.tab').forEach((btn) => {
+      if (btn.dataset.tab === tab) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
+    });
+    ['journal', 'dashboard', 'settings'].forEach((name) => { $('#view-' + name).hidden = name !== tab; });
+    $('#fab').hidden = tab !== 'journal';
+    if (tab === 'dashboard') renderDashboard();
+    if (tab === 'settings') renderSettings();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Install prompts (iOS Share card, Android beforeinstallprompt)
+  // ---------------------------------------------------------------------------
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/i.test(ua);
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+
+  function renderInstall() {
+    const card = $('#installCard');
+    const dismissed = lsGet(LS_INSTALL_DISMISSED) === '1';
+    if (isStandalone()) { card.hidden = true; card.innerHTML = ''; return; }
+    if (isIOS) {
+      // Persistent and non-dismissible: installing exempts the app from Safari's 7-day storage eviction.
+      card.innerHTML =
+        '<h2>Install to protect your data</h2>' +
+        '<p>Install this app to your Home Screen to protect your data. Tap <strong>Share</strong> ' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>' +
+        ' → <strong>Add to Home Screen</strong>.</p>' +
+        '<p class="hint">Until you install it, Safari may delete your logbook after 7 days without a visit.</p>';
+      card.hidden = false;
+      return;
+    }
+    if (dismissed) { card.hidden = true; card.innerHTML = ''; return; }
+    if (state.deferredPrompt) {
+      card.innerHTML =
+        '<h2>Install Surgical Logbook</h2>' +
+        '<p>Install the app to your Home screen for full-screen, offline use and more reliable storage.</p>' +
+        '<div class="btn-row"><button type="button" class="btn btn-primary" id="installNow">Install</button>' +
+        '<button type="button" class="btn" id="installLater">Not now</button></div>';
+      card.hidden = false;
+      return;
+    }
+    if (isAndroid && state.installHintReady) {
+      card.innerHTML =
+        '<h2>Install Surgical Logbook</h2>' +
+        '<p>For reliable offline storage, tap Chrome’s <strong>⋮</strong> menu → <strong>Add to Home screen</strong> (or <strong>Install app</strong>).</p>' +
+        '<div class="btn-row"><button type="button" class="btn" id="installLater">Got it</button></div>';
+      card.hidden = false;
+      return;
+    }
+    card.hidden = true;
+    card.innerHTML = '';
+  }
+
+  async function promptInstall() {
+    const evt = state.deferredPrompt;
+    if (!evt) return;
+    state.deferredPrompt = null;
+    try {
+      await evt.prompt();
+      await evt.userChoice;
+    } catch (e) {
+      /* the prompt can only be shown once */
+    }
+    renderInstall();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Journal
+  // ---------------------------------------------------------------------------
+  function highestGrade(c) {
+    let best = -1;
+    c.procedures.forEach((p) => {
+      const i = GRADES.indexOf(p.grade);
+      if (i > best) best = i;
+    });
+    return best;
+  }
+  function hasComplication(c) {
+    return c.procedures.some((p) => (p.grade && p.grade !== 'None') || p.complications);
+  }
+
+  function cardHTML(c) {
+    const grade = highestGrade(c);
+    let badge;
+    if (hasComplication(c)) {
+      const label = grade > 0 ? GRADES[grade].replace('Clavien-Dindo ', 'CD ') : 'Complication';
+      badge = '<span class="badge badge-comp">⚠ ' + esc(label) + '</span>';
+    } else {
+      badge = '<span class="badge badge-ok">No complications</span>';
+    }
+    const where = [c.hospital, c.department].filter(Boolean).map(esc).join(' · ');
+    const procs = c.procedures.map((p) =>
+      '<li><span class="pname">' + esc(p.procedure) + '</span><span class="prole">' + esc(p.role) +
+      (p.approach ? ' · ' + esc(p.approach) : '') + (p.timing ? ' · ' + esc(p.timing) : '') + '</span></li>'
+    ).join('');
+    const sup = c.supervisor ? '<div class="case-sup">Supervisor: ' + esc(c.supervisor) + '</div>' : '';
+    const label = 'Edit case: ' + fmtDate(c.date) + ', ' + c.procedures.map((p) => p.procedure).join(', ');
+    return '<li class="case-item" data-id="' + esc(c.id) + '">' +
+      '<button type="button" class="swipe-delete" tabindex="-1" aria-hidden="true">Delete</button>' +
+      '<div class="case-body" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
+      '<div class="case-top"><span class="case-date">' + esc(fmtDate(c.date)) + '</span>' + badge + '</div>' +
+      '<div class="case-where">' + where + '</div>' +
+      '<ul class="case-procs">' + procs + '</ul>' + sup +
+      '</div></li>';
+  }
+
+  function renderJournal() {
+    $('#journalLoading').hidden = state.loaded;
+    if (!state.loaded) return;
+    const months = caseMonths().slice().reverse();
+    state.filters.month = fillSelect($('#fMonth'),
+      [{ value: '', label: 'All months' }].concat(months.map((k) => ({ value: k, label: fmtMonth(k) }))), state.filters.month);
+    state.filters.role = fillSelect($('#fRole'),
+      [{ value: '', label: 'All roles' }].concat(ROLES.map((r) => ({ value: r, label: r }))), state.filters.role);
+    state.filters.procedure = fillSelect($('#fProc'),
+      [{ value: '', label: 'All procedures' }].concat(usedProcedures().map((p) => ({ value: p, label: p }))), state.filters.procedure);
+
+    const f = state.filters;
+    const filtered = sortedCases().filter((c) =>
+      (!f.month || c.date.slice(0, 7) === f.month) &&
+      (!f.role || c.procedures.some((p) => p.role === f.role)) &&
+      (!f.procedure || c.procedures.some((p) => p.procedure === f.procedure))
+    );
+    const hasCases = state.cases.length > 0;
+    $('#filterBar').hidden = !hasCases;
+    $('#journalEmpty').hidden = hasCases;
+    $('#filterEmpty').hidden = !(hasCases && filtered.length === 0);
+    $('#swipeHint').hidden = filtered.length === 0;
+    const total = state.cases.length;
+    $('#journalCount').textContent = !hasCases ? '' :
+      (filtered.length === total ? total + (total === 1 ? ' case' : ' cases') : filtered.length + ' of ' + total + ' cases');
+
+    const list = $('#caseList');
+    list.innerHTML = filtered.map(cardHTML).join('');
+    $$('.case-item', list).forEach(enableSwipe);
+  }
+
+  const SWIPE_OPEN = -96;
+  function setSwipeOpen(item, open) {
+    if (open) $$('.case-item.open').forEach((other) => { if (other !== item) setSwipeOpen(other, false); });
+    item.classList.toggle('open', open);
+    const body = $('.case-body', item);
+    body.style.transform = '';
+    const del = $('.swipe-delete', item);
+    del.tabIndex = open ? 0 : -1;
+    if (open) del.removeAttribute('aria-hidden'); else del.setAttribute('aria-hidden', 'true');
+  }
+
+  function enableSwipe(item) {
+    const body = $('.case-body', item);
+    const id = item.dataset.id;
+    let startX = 0, startY = 0, base = 0, dx = 0;
+    let tracking = false, decided = false, horizontal = false, suppressClick = false;
+
+    body.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      tracking = true; decided = false; horizontal = false; suppressClick = false;
+      startX = e.clientX; startY = e.clientY;
+      base = item.classList.contains('open') ? SWIPE_OPEN : 0;
+      dx = base;
+    });
+    body.addEventListener('pointermove', (e) => {
+      if (!tracking) return;
+      const mx = e.clientX - startX;
+      const my = e.clientY - startY;
+      if (!decided) {
+        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+        decided = true;
+        horizontal = Math.abs(mx) > Math.abs(my);
+        if (!horizontal) { tracking = false; return; }
+        try { body.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
+        body.style.transition = 'none';
+      }
+      dx = Math.min(0, Math.max(SWIPE_OPEN - 40, base + mx));
+      body.style.transform = 'translateX(' + dx + 'px)';
+    });
+    const finish = () => {
+      if (!tracking) return;
+      tracking = false;
+      if (horizontal) {
+        body.style.transition = '';
+        suppressClick = true;
+        setSwipeOpen(item, dx < SWIPE_OPEN / 2);
+      }
+    };
+    body.addEventListener('pointerup', finish);
+    body.addEventListener('pointercancel', finish);
+    body.addEventListener('click', () => {
+      if (suppressClick) { suppressClick = false; return; }
+      if (item.classList.contains('open')) { setSwipeOpen(item, false); return; }
+      openEditor(id);
+    });
+    body.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(id); }
+    });
+    $('.swipe-delete', item).addEventListener('click', () => deleteCase(id));
+  }
+
+  async function deleteCase(id) {
+    const c = state.cases.find((x) => x.id === id);
+    if (!c) return false;
+    const ok = await confirmDialog('Delete this case?',
+      fmtDate(c.date) + ' · ' + c.procedures.map((p) => p.procedure).join(', ') +
+      '\nThis can’t be undone. Export a JSON backup first if you’re unsure.', 'Delete', true);
+    if (!ok) {
+      const item = $('.case-item[data-id="' + CSS.escape(id) + '"]');
+      if (item) setSwipeOpen(item, false);
+      return false;
+    }
+    const previous = state.cases;
+    state.cases = state.cases.filter((x) => x.id !== id);
+    try {
+      await persist();
+    } catch (err) {
+      state.cases = previous;
+      renderAll();
+      toast('Couldn’t delete: ' + err.message);
+      return false;
+    }
+    renderAll();
+    toast('Case deleted.');
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------------------
+  // Drawn at the container's real pixel width so text stays the same size on phones and tablets.
+  function roleChartSVG(counts, ariaLabel, width) {
+    const W = Math.max(260, Math.floor(width || 320)), rowH = 50, H = ROLES.length * rowH;
+    const max = Math.max(1, ...ROLES.map((r) => counts[r] || 0));
+    const barMax = W - 44;
+    let s = '<svg class="chart" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(ariaLabel) + '">';
+    ROLES.forEach((role, i) => {
+      const y = i * rowH;
+      const c = counts[role] || 0;
+      const w = c ? Math.max(4, barMax * c / max) : 0;
+      s += '<text x="0" y="' + (y + 17) + '" class="c-label">' + esc(role) + '</text>';
+      s += '<rect x="0" y="' + (y + 25) + '" width="' + barMax + '" height="18" rx="4" class="c-track"/>';
+      if (w) s += '<rect x="0" y="' + (y + 25) + '" width="' + w.toFixed(1) + '" height="18" rx="4" class="c-bar"/>';
+      s += '<text x="' + W + '" y="' + (y + 39) + '" text-anchor="end" class="c-value">' + c + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  function monthChartSVG(keys, counts) {
+    const slot = 44, padX = 10, top = 22, plotH = 150, bottom = 40;
+    const W = Math.max(keys.length * slot + padX * 2, 280);
+    const H = top + plotH + bottom;
+    const max = Math.max(1, ...keys.map((k) => counts[k] || 0));
+    const total = keys.reduce((sum, k) => sum + (counts[k] || 0), 0);
+    const label = 'Cases per month from ' + fmtMonth(keys[0]) + ' to ' + fmtMonth(keys[keys.length - 1]) + ': ' + total + ' in total. ' +
+      keys.filter((k) => counts[k]).map((k) => fmtMonth(k) + ' ' + counts[k]).join(', ');
+    let s = '<svg class="chart" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">';
+    s += '<line x1="0" y1="' + (top + plotH) + '" x2="' + W + '" y2="' + (top + plotH) + '" class="c-axis"/>';
+    keys.forEach((k, i) => {
+      const c = counts[k] || 0;
+      const h = c ? Math.max(3, plotH * c / max) : 0;
+      const bw = slot - 16;
+      const x = padX + i * slot + 8;
+      const cx = x + bw / 2;
+      if (h) s += '<rect x="' + x + '" y="' + (top + plotH - h).toFixed(1) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="3" class="c-bar"/>';
+      if (c) s += '<text x="' + cx + '" y="' + (top + plotH - h - 6).toFixed(1) + '" text-anchor="middle" class="c-value-sm">' + c + '</text>';
+      const month = Number(k.slice(5, 7));
+      s += '<text x="' + cx + '" y="' + (top + plotH + 17) + '" text-anchor="middle" class="c-tick">' + MONTHS[month - 1] + '</text>';
+      if (i === 0 || month === 1) s += '<text x="' + cx + '" y="' + (top + plotH + 33) + '" text-anchor="middle" class="c-tick-year">' + k.slice(0, 4) + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  function renderDashboard() {
+    if (!state.loaded) return;
+    const all = state.cases;
+    const thisMonth = currentMonthKey();
+    $('#statTotal').textContent = String(all.length);
+    $('#statMonth').textContent = String(all.filter((c) => c.date.slice(0, 7) === thisMonth).length);
+
+    const allCounts = new Map();
+    all.forEach((c) => c.procedures.forEach((p) => allCounts.set(p.procedure, (allCounts.get(p.procedure) || 0) + 1)));
+    let top = null;
+    allCounts.forEach((n, name) => {
+      if (!top || n > top.n || (n === top.n && name.localeCompare(top.name) < 0)) top = { name: name, n: n };
+    });
+    $('#statTop').textContent = top ? top.name + ' (' + top.n + ')' : '—';
+
+    const months = caseMonths().slice().reverse();
+    state.dash.month = fillSelect($('#dashMonth'),
+      [{ value: '', label: 'All time' }].concat(months.map((k) => ({ value: k, label: fmtMonth(k) }))), state.dash.month);
+    const period = state.dash.month ? fmtMonth(state.dash.month) : 'all time';
+    $('#procCountsTitle').textContent = 'Counts by procedure — ' + period;
+    $('#roleChartTitle').textContent = 'Counts by role — ' + period;
+
+    const scoped = state.dash.month ? all.filter((c) => c.date.slice(0, 7) === state.dash.month) : all;
+    const noMonthCases = Boolean(state.dash.month) && scoped.length === 0;
+    $('#dashNoMonth').hidden = !noMonthCases;
+
+    // Counts by procedure
+    const counts = new Map();
+    const roleCounts = {};
+    scoped.forEach((c) => c.procedures.forEach((p) => {
+      counts.set(p.procedure, (counts.get(p.procedure) || 0) + 1);
+      roleCounts[p.role] = (roleCounts[p.role] || 0) + 1;
+    }));
+    const rows = Array.from(counts.entries());
+    const dir = state.dash.dir === 'asc' ? 1 : -1;
+    if (state.dash.sort === 'name') rows.sort((a, b) => dir * a[0].localeCompare(b[0]));
+    else rows.sort((a, b) => dir * (a[1] - b[1]) || a[0].localeCompare(b[0]));
+
+    const wrap = $('#procCountsWrap');
+    if (noMonthCases) {
+      wrap.innerHTML = '';
+    } else if (!rows.length) {
+      wrap.innerHTML = '<p class="muted">No procedures logged yet — counts will appear here.</p>';
+    } else {
+      const sortAttr = (key) => state.dash.sort === key ? (state.dash.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+      const arrow = (key) => state.dash.sort === key ? (state.dash.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const totalProcs = rows.reduce((sum, r) => sum + r[1], 0);
+      wrap.innerHTML =
+        '<div class="table-scroll"><table class="counts"><caption class="visually-hidden">Procedure counts, ' + esc(period) + '</caption>' +
+        '<thead><tr><th scope="col" aria-sort="' + sortAttr('name') + '"><button type="button" data-sort="name">Procedure' + arrow('name') + '</button></th>' +
+        '<th scope="col" class="num" aria-sort="' + sortAttr('count') + '"><button type="button" data-sort="count">Count' + arrow('count') + '</button></th></tr></thead><tbody>' +
+        rows.map((r) => '<tr><td>' + esc(r[0]) + '</td><td class="num">' + r[1] + '</td></tr>').join('') +
+        '</tbody></table></div><p class="hint">' + totalProcs + (totalProcs === 1 ? ' procedure' : ' procedures') + ' across ' +
+        scoped.length + (scoped.length === 1 ? ' case' : ' cases') + '. Tap a column heading to sort.</p>';
+    }
+
+    // Counts by role
+    const roleLabel = 'Procedures by role, ' + period + ': ' + ROLES.map((r) => r + ' ' + (roleCounts[r] || 0)).join(', ');
+    const roleBox = $('#roleChart');
+    roleBox.innerHTML = noMonthCases ? '<p class="empty">No cases for this month.</p>' : roleChartSVG(roleCounts, roleLabel, roleBox.clientWidth);
+
+    // Cases per month — full history, independent of the filter
+    const keys = caseMonths();
+    const perMonth = {};
+    all.forEach((c) => { const k = c.date.slice(0, 7); perMonth[k] = (perMonth[k] || 0) + 1; });
+    const chart = $('#monthChart');
+    chart.innerHTML = monthChartSVG(keys, perMonth);
+    chart.scrollLeft = chart.scrollWidth;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+  function renderStorageStatus() {
+    const mode = Store.mode();
+    const name = mode === 'opfs' ? 'OPFS' : mode === 'indexeddb' ? 'IndexedDB' : 'Temporary (not saved)';
+    $('#storageStatus').innerHTML = 'Storage: <strong>' + esc(name) + '</strong> · Last export: <strong>' + esc(fmtTimestamp(state.lastExport)) + '</strong>';
+    const parts = [];
+    parts.push(state.cases.length + (state.cases.length === 1 ? ' case' : ' cases') + ' on this device.');
+    if (mode === 'opfs') parts.push('Mirrored to IndexedDB for recovery.');
+    if (state.persisted === true) parts.push('Persistent storage granted.');
+    else if (state.persisted === false) parts.push('Persistent storage not granted by the browser — installing the app and exporting backups keeps your data safe.');
+    if (mode === 'memory') parts.push('This browser is blocking storage (often private browsing). Cases will be lost when you close the app.');
+    $('#storageDetail').textContent = parts.join(' ');
+  }
+
+  function renderSettings() {
+    renderStorageStatus();
+    $('#shareUrl').value = location.origin + location.pathname;
+    $('#appVersion').textContent = 'v' + APP_VERSION;
+    $('#installState').textContent = isStandalone() ? 'Running as an installed app.' : 'Running in the browser — install the app for the most reliable storage.';
+  }
+
+  function renderAll() {
+    renderJournal();
+    if (state.tab === 'dashboard') renderDashboard();
+    if (state.tab === 'settings') renderSettings();
+    else renderStorageStatus();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Confirm dialog
+  // ---------------------------------------------------------------------------
+  function confirmDialog(title, message, okLabel, danger) {
+    return new Promise((resolve) => {
+      const dialog = $('#confirmDialog');
+      if (typeof dialog.showModal !== 'function') {
+        resolve(window.confirm(title + '\n\n' + message));
+        return;
+      }
+      $('#cdTitle').textContent = title;
+      $('#cdMsg').textContent = message;
+      const ok = $('#cdOk');
+      ok.textContent = okLabel || 'OK';
+      ok.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+      const onClose = () => {
+        dialog.removeEventListener('close', onClose);
+        resolve(dialog.returnValue === 'ok');
+      };
+      dialog.addEventListener('close', onClose);
+      dialog.returnValue = '';
+      dialog.showModal();
+      $('#cdCancel').focus();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Combobox (searchable dropdown / autocomplete) — same behaviour on iOS and Android
+  // ---------------------------------------------------------------------------
+  let comboCount = 0;
+  function attachCombo(input, getOptions, opts) {
+    const options = opts || {};
+    const wrap = input.parentElement;
+    comboCount += 1;
+    const list = document.createElement('ul');
+    list.className = 'combo-list';
+    list.id = 'combo-list-' + comboCount;
+    list.setAttribute('role', 'listbox');
+    list.hidden = true;
+    wrap.appendChild(list);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', list.id);
+    let items = [];
+    let active = -1;
+
+    function close() {
+      list.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      active = -1;
+    }
+    function highlight(index) {
+      active = index;
+      $$('li', list).forEach((li, i) => li.setAttribute('aria-selected', i === index ? 'true' : 'false'));
+      const li = list.children[index];
+      if (li) {
+        input.setAttribute('aria-activedescendant', li.id);
+        li.scrollIntoView({ block: 'nearest' });
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    }
+    function render() {
+      const raw = input.value.trim();
+      const q = raw.toLowerCase();
+      const all = getOptions();
+      let matches = q ? all.filter((o) => o.toLowerCase().indexOf(q) > -1) : all.slice();
+      if (q) {
+        matches.sort((a, b) => {
+          const sa = a.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          const sb = b.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          return sa - sb;
+        });
+      }
+      matches = matches.slice(0, options.max || 60);
+      items = matches.map((v) => ({ value: v, label: v, kind: 'option' }));
+      if (options.freeText) {
+        const exact = all.some((o) => o.toLowerCase() === q);
+        if (q && !exact) items.push({ value: raw, label: 'Can’t find my procedure? Use “' + raw + '”', kind: 'free' });
+        if (!q) items.push({ value: '', label: 'Can’t find my procedure? Type its full name above.', kind: 'note' });
+      }
+      if (!items.length || (items.length === 1 && items[0].kind === 'option' && items[0].value === raw)) { close(); return; }
+      list.innerHTML = items.map((it, i) =>
+        '<li id="' + list.id + '-' + i + '" role="option" aria-selected="false"' +
+        (it.kind === 'note' ? ' aria-disabled="true" class="note"' : it.kind === 'free' ? ' class="free"' : '') +
+        '>' + esc(it.label) + '</li>').join('');
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      active = -1;
+    }
+    function choose(index) {
+      const it = items[index];
+      if (!it || it.kind === 'note') return;
+      input.value = it.value;
+      close();
+      state.dirty = true;
+      input.removeAttribute('aria-invalid');
+      if (typeof options.onSelect === 'function') options.onSelect(it.value);
+    }
+
+    input.addEventListener('focus', render);
+    input.addEventListener('input', render);
+    input.addEventListener('blur', () => setTimeout(close, 120));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (list.hidden) render();
+        let i = active;
+        do { i = Math.min(items.length - 1, i + 1); } while (items[i] && items[i].kind === 'note' && i < items.length - 1);
+        if (items[i] && items[i].kind !== 'note') highlight(i);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        let i = Math.max(0, active - 1);
+        while (items[i] && items[i].kind === 'note' && i > 0) i -= 1;
+        highlight(i);
+      } else if (e.key === 'Enter') {
+        if (!list.hidden && active > -1) {
+          e.preventDefault();
+          e.stopPropagation();
+          choose(active);
+        }
+      } else if (e.key === 'Escape') {
+        if (!list.hidden) { e.preventDefault(); e.stopPropagation(); close(); }
+      }
+    });
+    // Keep focus in the input while tapping an option.
+    list.addEventListener('pointerdown', (e) => e.preventDefault());
+    list.addEventListener('mousedown', (e) => e.preventDefault());
+    list.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      choose(Array.prototype.indexOf.call(list.children, li));
+    });
+    return { close: close };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Case editor
+  // ---------------------------------------------------------------------------
+  let procUid = 0;
+  let lastFocus = null;
+  let ignorePop = false;
+
+  function optionList(values, placeholder) {
+    return '<option value="">' + esc(placeholder) + '</option>' + values.map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+  }
+
+  function addProcBlock(p, focus) {
+    procUid += 1;
+    const u = 'proc' + procUid;
+    const block = document.createElement('div');
+    block.className = 'proc-block';
+    block.dataset.uid = u;
+    block.innerHTML =
+      '<div class="proc-head"><h3 class="proc-title">Procedure</h3>' +
+      '<button type="button" class="link-btn danger remove-proc">Remove</button></div>' +
+      '<div class="field"><label for="' + u + '-proc">Procedure <span class="req" aria-hidden="true">*</span></label>' +
+      '<div class="combo"><input type="text" id="' + u + '-proc" class="f-proc" required aria-required="true" aria-describedby="' + u + '-proc-err" placeholder="Search or type a procedure" spellcheck="false"></div>' +
+      '<p class="err" id="' + u + '-proc-err"></p></div>' +
+      '<div class="field"><label for="' + u + '-role">Supervision level / role in theatre <span class="req" aria-hidden="true">*</span></label>' +
+      '<select id="' + u + '-role" class="f-role" required aria-required="true" aria-describedby="' + u + '-role-err">' + optionList(ROLES, 'Select your role…') + '</select>' +
+      '<p class="err" id="' + u + '-role-err"></p></div>' +
+      '<div class="grid2"><div class="field"><label for="' + u + '-timing">Timing</label>' +
+      '<select id="' + u + '-timing" class="f-timing">' + optionList(TIMINGS, 'Not recorded') + '</select></div>' +
+      '<div class="field"><label for="' + u + '-approach">Approach</label>' +
+      '<select id="' + u + '-approach" class="f-approach">' + optionList(APPROACHES, 'Not recorded') + '</select></div></div>' +
+      '<div class="field"><label for="' + u + '-grade">Complication grade</label>' +
+      '<select id="' + u + '-grade" class="f-grade">' + optionList(GRADES, 'Not recorded') + '</select></div>' +
+      '<div class="field"><label for="' + u + '-comp">Complications</label>' +
+      '<textarea id="' + u + '-comp" class="f-comp" placeholder="Describe any complication (no patient identifiers)"></textarea></div>';
+    $('#procList').appendChild(block);
+    const data = p || {};
+    $('.f-proc', block).value = data.procedure || '';
+    $('.f-role', block).value = data.role || '';
+    $('.f-timing', block).value = data.timing || '';
+    $('.f-approach', block).value = data.approach || '';
+    $('.f-grade', block).value = data.grade || '';
+    $('.f-comp', block).value = data.complications || '';
+    attachCombo($('.f-proc', block), procedureOptions, { freeText: true, max: 200 });
+    $('.remove-proc', block).addEventListener('click', () => {
+      block.remove();
+      state.dirty = true;
+      updateProcBlocks();
+      $('#addProc').focus();
+    });
+    updateProcBlocks();
+    if (focus) {
+      block.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      setTimeout(() => $('.f-proc', block).focus(), 250);
+    }
+  }
+
+  function updateProcBlocks() {
+    const blocks = $$('.proc-block', $('#procList'));
+    blocks.forEach((b, i) => {
+      $('.proc-title', b).textContent = blocks.length > 1 ? 'Procedure ' + (i + 1) : 'Procedure';
+      const remove = $('.remove-proc', b);
+      remove.hidden = blocks.length < 2;
+      remove.setAttribute('aria-label', 'Remove procedure ' + (i + 1));
+    });
+  }
+
+  function renderAltChips() {
+    $('#altChips').innerHTML = state.altSupervisors.map((name, i) =>
+      '<span class="chip">' + esc(name) + '<button type="button" data-index="' + i + '" aria-label="Remove ' + esc(name) + '">×</button></span>'
+    ).join('');
+  }
+  function addAltSupervisor() {
+    const input = $('#fAltSup');
+    const name = input.value.trim();
+    if (!name) return false;
+    if (!state.altSupervisors.some((s) => s.toLowerCase() === name.toLowerCase())) {
+      state.altSupervisors.push(name);
+      state.dirty = true;
+      renderAltChips();
+    }
+    input.value = '';
+    return true;
+  }
+
+  function clearErrors() {
+    $$('.err', $('#caseForm')).forEach((el) => { el.textContent = ''; });
+    $$('[aria-invalid]', $('#caseForm')).forEach((el) => el.removeAttribute('aria-invalid'));
+    $('#formAlert').hidden = true;
+  }
+
+  function buildForm(c) {
+    clearErrors();
+    const latest = sortedCases()[0];
+    const base = c || {
+      date: todayISO(),
+      // Convenience: a new case starts with the context of your most recent case.
+      hospital: latest ? latest.hospital : '',
+      department: latest ? latest.department : '',
+      rotation: latest ? latest.rotation : '',
+      level: latest ? latest.level : '',
+      procedures: [{}],
+      learningPoints: '',
+      supervisor: '',
+      altSupervisors: []
+    };
+    $('#fDate').value = base.date;
+    $('#fDate').max = todayISO();
+    $('#fHospital').value = base.hospital || '';
+    $('#fDept').value = base.department || '';
+    $('#fRotation').value = base.rotation || '';
+    $('#fLevel').value = base.level || '';
+    $('#fLearning').value = base.learningPoints || '';
+    $('#fSupervisor').value = base.supervisor || '';
+    $('#fAltSup').value = '';
+    state.altSupervisors = (base.altSupervisors || []).slice();
+    renderAltChips();
+    $('#procList').innerHTML = '';
+    (base.procedures && base.procedures.length ? base.procedures : [{}]).forEach((p) => addProcBlock(p, false));
+    $('#modalTitle').textContent = c ? 'Edit case' : 'New case';
+    $('#deleteCase').hidden = !c;
+  }
+
+  function collectForm() {
+    addAltSupervisor(); // include a name typed but not yet added
+    return {
+      date: $('#fDate').value.trim(),
+      hospital: $('#fHospital').value.trim(),
+      department: $('#fDept').value.trim(),
+      rotation: $('#fRotation').value.trim(),
+      level: $('#fLevel').value,
+      procedures: $$('.proc-block', $('#procList')).map((b) => ({
+        procedure: $('.f-proc', b).value.trim(),
+        role: $('.f-role', b).value,
+        timing: $('.f-timing', b).value,
+        approach: $('.f-approach', b).value,
+        grade: $('.f-grade', b).value,
+        complications: $('.f-comp', b).value.trim()
+      })),
+      learningPoints: $('#fLearning').value.trim(),
+      supervisor: $('#fSupervisor').value.trim(),
+      altSupervisors: state.altSupervisors.slice()
+    };
+  }
+
+  function validateForm(data) {
+    const errors = [];
+    const add = (input, message) => errors.push({ input: input, message: message });
+    if (!isISODate(data.date)) add($('#fDate'), 'Enter the procedure date.');
+    else if (data.date > todayISO()) add($('#fDate'), 'The procedure date can’t be in the future.');
+    if (!data.hospital) add($('#fHospital'), 'Enter the hospital.');
+    $$('.proc-block', $('#procList')).forEach((b, i) => {
+      const p = data.procedures[i];
+      if (!p.procedure) add($('.f-proc', b), 'Choose or type a procedure.');
+      if (!p.role) add($('.f-role', b), 'Select your supervision level / role in theatre.');
+    });
+    return errors;
+  }
+
+  function showErrors(errors) {
+    clearErrors();
+    errors.forEach((e) => {
+      e.input.setAttribute('aria-invalid', 'true');
+      const box = document.getElementById(e.input.id + '-err');
+      if (box) box.textContent = e.message;
+    });
+    if (errors.length) {
+      const alert = $('#formAlert');
+      alert.textContent = errors.length === 1 ? 'Please fix 1 item below before saving.' : 'Please fix ' + errors.length + ' items below before saving.';
+      alert.hidden = false;
+    }
+  }
+
+  function openEditor(id) {
+    const c = id ? state.cases.find((x) => x.id === id) : null;
+    if (id && !c) return;
+    lastFocus = document.activeElement;
+    state.editingId = c ? c.id : null;
+    buildForm(c);
+    state.dirty = false;
+    const modal = $('#caseModal');
+    modal.hidden = false;
+    modal.scrollTop = 0;
+    document.body.classList.add('modal-open');
+    history.pushState({ slModal: true }, '');
+    setTimeout(() => $('#modalTitle').focus(), 30);
+  }
+
+  function hideModal() {
+    $('#caseModal').hidden = true;
+    document.body.classList.remove('modal-open');
+    state.editingId = null;
+    state.dirty = false;
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+
+  function closeModal() {
+    hideModal();
+    if (history.state && history.state.slModal) {
+      ignorePop = true;
+      history.back();
+    }
+  }
+
+  async function requestCloseModal() {
+    if (state.dirty) {
+      const ok = await confirmDialog('Discard changes?', 'Your changes to this case haven’t been saved.', 'Discard', true);
+      if (!ok) return;
+    }
+    closeModal();
+  }
+
+  async function onSave(event) {
+    event.preventDefault();
+    if (state.saving) return;
+    const data = collectForm();
+    const errors = validateForm(data);
+    showErrors(errors);
+    if (errors.length) {
+      errors[0].input.focus();
+      errors[0].input.scrollIntoView({ block: 'center' });
+      return;
+    }
+    const previous = state.cases;
+    const now = new Date().toISOString();
+    if (state.editingId) {
+      state.cases = state.cases.map((c) => c.id === state.editingId
+        ? Object.assign({}, c, data, { updatedAt: now })
+        : c);
+    } else {
+      state.cases = state.cases.concat([Object.assign({ id: uuid(), createdAt: now, updatedAt: now }, data)]);
+    }
+    state.saving = true;
+    $('#saveCase').disabled = true;
+    try {
+      await persist();
+      state.dirty = false;
+      closeModal();
+      renderAll();
+      toast('Case saved.');
+    } catch (err) {
+      state.cases = previous;
+      toast('Couldn’t save: ' + err.message);
+    } finally {
+      state.saving = false;
+      $('#saveCase').disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Export / import
+  // ---------------------------------------------------------------------------
+  const CSV_HEADERS = ['Case ID', 'Procedure Date', 'Hospital', 'Department / Unit / Clinic', 'Rotation Period',
+    'SET / PGY Level', 'Procedure No.', 'Procedure', 'Supervision Level / Role in Theatre', 'Timing', 'Approach',
+    'Complication Grade', 'Complications', 'Nominated Supervisor', 'Alternate Supervisor(s)', 'Learning Points',
+    'Created', 'Last Updated'];
+
+  // RFC 4180: quote fields containing commas, quotes or line breaks; double internal quotes.
+  // Cells starting with = + @ are prefixed with ' so spreadsheets never run them as formulas.
+  function csvCell(value) {
+    let s = value == null ? '' : String(value);
+    if (/^[=+@\t\r]/.test(s)) s = "'" + s;
+    if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function buildCSV(cases) {
+    const lines = [CSV_HEADERS.map(csvCell).join(',')];
+    cases.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt < b.createdAt ? -1 : 1))).forEach((c) => {
+      c.procedures.forEach((p, i) => {
+        lines.push([c.id, c.date, c.hospital, c.department, c.rotation, c.level, i + 1, p.procedure, p.role, p.timing,
+          p.approach, p.grade, p.complications, c.supervisor, c.altSupervisors.join('; '), c.learningPoints,
+          c.createdAt, c.updatedAt].map(csvCell).join(','));
+      });
+    });
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  // Path A: Web Share API with files (native share sheet). Path B: <a download>.
+  async function deliverFile(blob, filename, type) {
+    let file = null;
+    try { file = new File([blob], filename, { type: type }); } catch (e) { file = null; }
+    if (file && navigator.canShare && navigator.share) {
+      let canShareFile = false;
+      try { canShareFile = navigator.canShare({ files: [file] }); } catch (e) { canShareFile = false; }
+      if (canShareFile) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          return 'shared';
+        } catch (err) {
+          if (err && err.name === 'AbortError') return 'cancelled';
+          /* otherwise fall back to a download */
+        }
+      }
+    }
+    downloadBlob(blob, filename);
+    return 'downloaded';
+  }
+
+  async function markExported() {
+    state.lastExport = new Date().toISOString();
+    try { await persist(); } catch (e) { /* export itself succeeded */ }
+    renderSettings();
+  }
+
+  async function exportCSV() {
+    if (!state.cases.length) { toast('No cases to export yet.'); return; }
+    const blob = new Blob(['﻿' + buildCSV(state.cases)], { type: 'text/csv' });
+    const result = await deliverFile(blob, 'surgical-logbook-' + todayISO() + '.csv', 'text/csv');
+    if (result === 'cancelled') return;
+    await markExported();
+    toast(result === 'shared' ? 'CSV ready — choose where to save it.' : 'CSV downloaded.');
+  }
+
+  async function exportJSON() {
+    if (!state.cases.length) { toast('No cases to back up yet.'); return; }
+    const text = JSON.stringify({
+      app: 'surgical-logbook', schema: 1, appVersion: APP_VERSION,
+      exportedAt: new Date().toISOString(), caseCount: state.cases.length, cases: state.cases
+    }, null, 2);
+    const blob = new Blob([text], { type: 'application/json' });
+    const result = await deliverFile(blob, 'surgical-logbook-backup-' + todayISO() + '.json', 'application/json');
+    if (result === 'cancelled') return;
+    await markExported();
+    toast(result === 'shared' ? 'Backup ready — choose where to save it.' : 'Backup downloaded.');
+  }
+
+  async function importJSON(file) {
+    const box = $('#importError');
+    box.hidden = true;
+    box.textContent = '';
+    let parsed;
+    try {
+      if (file.size > 50 * 1024 * 1024) throw new Error('This file is too large to be a logbook backup.');
+      const text = await file.text();
+      parsed = parseLogbook(text);
+    } catch (err) {
+      box.textContent = 'Import failed: ' + err.message + ' Your current logbook has not been changed.';
+      box.hidden = false;
+      toast('Import failed — nothing was changed.');
+      return;
+    }
+    const ok = await confirmDialog('Replace your logbook?',
+      'This will replace the ' + state.cases.length + (state.cases.length === 1 ? ' case' : ' cases') +
+      ' on this device with the ' + parsed.cases.length + (parsed.cases.length === 1 ? ' case' : ' cases') +
+      ' in “' + file.name + '”. Imports never merge.\nExport a backup first if you might need the current data.',
+      'Replace', true);
+    if (!ok) { toast('Import cancelled.'); return; }
+    const previous = state.cases;
+    state.cases = parsed.cases;
+    try {
+      await persist();
+    } catch (err) {
+      state.cases = previous;
+      box.textContent = 'Import failed: ' + err.message + ' Your current logbook has not been changed.';
+      box.hidden = false;
+      return;
+    }
+    state.filters = { month: '', role: '', procedure: '' };
+    state.dash.month = '';
+    renderAll();
+    toast('Imported ' + parsed.cases.length + (parsed.cases.length === 1 ? ' case.' : ' cases.'));
+  }
+
+  async function copyLink() {
+    const url = location.origin + location.pathname;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied.');
+    } catch (e) {
+      const input = $('#shareUrl');
+      input.focus();
+      input.select();
+      toast('Press and hold the link to copy it.');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Events
+  // ---------------------------------------------------------------------------
+  function bindEvents() {
+    $$('.tab').forEach((btn) => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+    $('#fab').addEventListener('click', () => openEditor(null));
+
+    $('#fMonth').addEventListener('change', (e) => { state.filters.month = e.target.value; renderJournal(); });
+    $('#fRole').addEventListener('change', (e) => { state.filters.role = e.target.value; renderJournal(); });
+    $('#fProc').addEventListener('change', (e) => { state.filters.procedure = e.target.value; renderJournal(); });
+    $('#clearFilters').addEventListener('click', () => { state.filters = { month: '', role: '', procedure: '' }; renderJournal(); });
+
+    $('#dashMonth').addEventListener('change', (e) => { state.dash.month = e.target.value; renderDashboard(); });
+    $('#procCountsWrap').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-sort]');
+      if (!btn) return;
+      const key = btn.dataset.sort;
+      if (state.dash.sort === key) state.dash.dir = state.dash.dir === 'asc' ? 'desc' : 'asc';
+      else { state.dash.sort = key; state.dash.dir = key === 'count' ? 'desc' : 'asc'; }
+      renderDashboard();
+      const again = $('#procCountsWrap button[data-sort="' + key + '"]');
+      if (again) again.focus();
+    });
+
+    $('#darkToggle').addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light', true));
+    $('#exportCsv').addEventListener('click', exportCSV);
+    $('#exportJson').addEventListener('click', exportJSON);
+    $('#importJson').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (file) importJSON(file);
+    });
+    $('#copyLink').addEventListener('click', copyLink);
+
+    // Install
+    $('#installCard').addEventListener('click', (e) => {
+      if (e.target.closest('#installNow')) promptInstall();
+      if (e.target.closest('#installLater')) { lsSet(LS_INSTALL_DISMISSED, '1'); renderInstall(); }
+    });
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      state.deferredPrompt = e;
+      renderInstall();
+    });
+    window.addEventListener('appinstalled', () => {
+      state.deferredPrompt = null;
+      renderInstall();
+      toast('App installed. Open it from your Home screen.');
+    });
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (state.tab === 'dashboard') renderDashboard(); }, 150);
+    });
+    if (window.matchMedia) {
+      const mq = window.matchMedia('(display-mode: standalone)');
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', renderInstall);
+    }
+    setTimeout(() => { state.installHintReady = true; renderInstall(); }, 4000);
+
+    // Editor
+    const form = $('#caseForm');
+    form.addEventListener('submit', onSave);
+    form.addEventListener('input', () => { state.dirty = true; });
+    form.addEventListener('change', () => { state.dirty = true; });
+    form.addEventListener('keydown', (e) => {
+      // Stop the keyboard's Go/Enter key from submitting the form from a single-line field.
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+        e.preventDefault();
+        if (e.target.id === 'fAltSup') addAltSupervisor();
+      }
+    });
+    $('#cancelCase').addEventListener('click', requestCloseModal);
+    $('#addProc').addEventListener('click', () => { addProcBlock({}, true); state.dirty = true; });
+    $('#addAltSup').addEventListener('click', () => { addAltSupervisor(); $('#fAltSup').focus(); });
+    $('#altChips').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-index]');
+      if (!btn) return;
+      state.altSupervisors.splice(Number(btn.dataset.index), 1);
+      state.dirty = true;
+      renderAltChips();
+      $('#fAltSup').focus();
+    });
+    $('#deleteCase').addEventListener('click', async () => {
+      const id = state.editingId;
+      if (!id) return;
+      const removed = await deleteCase(id);
+      if (removed) { state.dirty = false; closeModal(); }
+    });
+
+    attachCombo($('#fHospital'), hospitalOptions);
+    attachCombo($('#fDept'), departmentOptions);
+    attachCombo($('#fRotation'), rotationOptions);
+    attachCombo($('#fSupervisor'), supervisorOptions);
+    attachCombo($('#fAltSup'), supervisorOptions, { onSelect: addAltSupervisor });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !$('#caseModal').hidden && !$('#confirmDialog').open) {
+        e.preventDefault();
+        requestCloseModal();
+      }
+    });
+    // Android back button / back gesture closes the editor instead of leaving the app.
+    window.addEventListener('popstate', async () => {
+      if (ignorePop) { ignorePop = false; return; }
+      if ($('#caseModal').hidden) return;
+      if (state.dirty) {
+        history.pushState({ slModal: true }, '');
+        const ok = await confirmDialog('Discard changes?', 'Your changes to this case haven’t been saved.', 'Discard', true);
+        if (ok) closeModal();
+        return;
+      }
+      hideModal();
+    });
+  }
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // A new version took over: reload once so the new shell is used.
+      if (!hadController || reloading) return;
+      if (!$('#caseModal').hidden) return; // never interrupt someone entering a case
+      reloading = true;
+      window.location.reload();
+    });
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* app still works online */ });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Start-up
+  // ---------------------------------------------------------------------------
+  async function init() {
+    $('#fLevel').innerHTML = optionList(LEVELS, 'Not recorded');
+    applyTheme(currentTheme(), false);
+    bindEvents();
+    renderInstall();
+    registerServiceWorker();
+    renderSettings();
+
+    await Store.init();
+    try {
+      const data = await Store.load();
+      state.cases = data.cases;
+      state.lastExport = data.lastExport;
+    } catch (e) {
+      state.cases = [];
+    }
+    state.loaded = true;
+    renderAll();
+    if (Store.mode() === 'memory') toast('Storage is blocked in this browser — cases won’t be kept.');
+
+    // Ask for persistent storage; never block on the answer.
+    Store.requestPersistence().then((granted) => {
+      state.persisted = granted;
+      renderStorageStatus();
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
